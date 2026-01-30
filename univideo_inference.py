@@ -18,9 +18,20 @@ from utils import pad_image_pil_to_square, load_model
 def parse_args():
     p = argparse.ArgumentParser()
     p.add_argument(
-        "--task",
+        "--demo_task",
         type=str,
-        choices=["understanding", "multiid", "t2v", "t2i", "i2i_edit", "i+i2i_edit", "i2v", "i+v2v_edit", "v2v_edit"],
+        choices=["understanding", 
+                 "t2v", 
+                 "t2i", 
+                 "i2v",
+                 "image_edit", 
+                 "in_context_image_edit", 
+                 "in_context_video_gen", 
+                 "in_context_video_edit_addition",
+                 "in_context_video_edit_swap",
+                 "in_context_video_edit_style",
+                 "video_edit", 
+                 "stylization"],
         required=True,
         help="Generation task",
     )
@@ -117,19 +128,19 @@ def main():
     negative_prompt="Bright tones, overexposed, oversharpening, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, walking backwards, computer-generated environment, weak dynamics, distorted and erratic motions, unstable framing and a disorganized composition."
 
     # visual understanding
-    if args.task == "understanding":
+    if args.demo_task == "understanding":
         cond_video_path = "demo/understanding/1.mp4"
         prompt="Describe this video in detail"
         pipeline_kwargs = dict(
             prompts=[prompt],
             cond_video_path=cond_video_path,
             seed=42,
-            task=args.task,
+            task="understanding",
         )
 
     # image editing
-    elif args.task == "i2i_edit":
-        cond_image_path = "demo/i2i_edit/1.jpg"
+    elif args.demo_task == "image_edit":
+        cond_image_path = "demo/image_edit/1.jpg"
         prompt = "Change the background to dessert."
         pipeline_kwargs = dict(
             prompts=[prompt],
@@ -143,17 +154,39 @@ def main():
             image_guidance_scale=2.0,
             seed=42,
             timestep_shift=7.0,
-            task=args.task,
+            task="i2i_edit",
         )
-        output_path = "demo/i2i_edit/output.jpg"
+        output_path = "demo/image_edit/output.jpg"
 
+    # in context image editing
+    elif args.demo_task == "in_context_image_edit_swap":
+        ref_image_path_list = ["demo/in_context_image_edit/id.jpeg"]
+        ref_images_pil_list = [[pad_image_pil_to_square(Image.open(p).convert("RGB")) for p in ref_image_path_list]]
+        cond_image_path = "demo/in_context_image_edit/input.jpg"
+        prompt = "Let the woman wear the hat in the reference image."
+        pipeline_kwargs = dict(
+            prompts=[prompt],
+            negative_prompt=negative_prompt,
+            ref_images=ref_images_pil_list,
+            cond_image_path=cond_image_path,
+            height=480,
+            width=832,
+            num_frames=1,
+            num_inference_steps=30,
+            guidance_scale=7.0,
+            image_guidance_scale=2.0,
+            seed=42,
+            timestep_shift=7.0,
+            task="i+i2i_edit",
+        )
+        output_path = "demo/in_context_image_edit/output.jpg"
 
     # in context video generation
-    elif args.task == "multiid":
+    elif args.demo_task == "in_context_video_gen":
         ref_image_path_list = [
-            "demo/in-context-generation/1.png",
-            "demo/in-context-generation/2.png",
-            "demo/in-context-generation/3.jpg"
+            "demo/in_context_video_gen/1.png",
+            "demo/in_context_video_gen/2.png",
+            "demo/in_context_video_gen/3.jpg"
         ]
         ref_images_pil_list = [[pad_image_pil_to_square(Image.open(p).convert("RGB")) for p in ref_image_path_list]]
         prompt="A man with short, light brown hair and light skin, now dressed in a vibrant Hawaiian shirt with a colorful floral pattern, sits comfortably on a beach lounge chair. On his right shoulder, a fluffy, yellow Pikachu with a small detective hat perches, looking alertly at the camera. The man holds an ice cream cone piled high with vanilla ice cream and colorful sprinkles, taking a bite with a relaxed, happy expression. His smile is gentle and content, reflecting the ease of the moment. The camera slowly circles around them, capturing the leisurely scene from various perspectives."
@@ -169,16 +202,15 @@ def main():
             image_guidance_scale=3.0,
             seed=42,
             timestep_shift=7.0,
-            task=args.task,
+            task="multiid",
         )
-        output_path = "demo/in-context-generation/output.mp4"
+        output_path = "demo/in_context_video_gen/output.mp4"
 
-
-    # in context v2v editing
-    elif args.task == "i+v2v_edit":
-        ref_image_path_list = ["demo/in-context-v2v/id_swap/ID.jpeg"]
+    # in context v2v editing-swap
+    elif args.demo_task == "in_context_video_edit_swap":
+        ref_image_path_list = ["demo/in_context_video_edit/id_swap/ID.jpeg"]
         ref_images_pil_list = [[pad_image_pil_to_square(Image.open(p).convert("RGB")) for p in ref_image_path_list]]
-        cond_video_path = "demo/in-context-v2v/id_swap/origin.mp4"
+        cond_video_path = "demo/in_context_video_edit/id_swap/origin.mp4"
         prompt = "Use the man's face in the reference image to replace the man's face in the video."
         pipeline_kwargs = dict(
             prompts=[prompt],
@@ -193,13 +225,62 @@ def main():
             image_guidance_scale=2.0,
             seed=42,
             timestep_shift=7.0,
-            task=args.task,
+            task="i+v2v_edit",
         )
-        output_path = "demo/in-context-v2v/id_swap/output.mp4"
+        output_path = "demo/in_context_video_edit/id_swap/output.mp4"
+
+    
+    # in context v2v editing-style
+    elif args.demo_task == "in_context_video_edit_style":
+        ref_image_path_list = ["demo/in_context_video_edit/style/ref.jpg"]
+        ref_images_pil_list = [[pad_image_pil_to_square(Image.open(p).convert("RGB")) for p in ref_image_path_list]]
+        cond_video_path = "demo/in_context_video_edit/style/video.mp4"
+        prompt = "Change the video to the style of the reference image."
+        pipeline_kwargs = dict(
+            prompts=[prompt],
+            negative_prompt=negative_prompt,
+            ref_images=ref_images_pil_list,
+            cond_video_path=cond_video_path,
+            height=832,
+            width=480,
+            num_frames=61,
+            num_inference_steps=30,
+            guidance_scale=7.0,
+            image_guidance_scale=2.0,
+            seed=42,
+            timestep_shift=7.0,
+            task="i+v2v_edit",
+        )
+        output_path = "demo/in_context_video_edit/style/output.mp4"
+        
+
+    # in context v2v editing-addition
+    elif args.demo_task == "in_context_video_edit_addition":
+        ref_image_path_list = ["demo/in_context_video_edit/id_addition/images.jpeg"]
+        ref_images_pil_list = [[pad_image_pil_to_square(Image.open(p).convert("RGB")) for p in ref_image_path_list]]
+        cond_video_path = "demo/in_context_video_edit/id_addition/reference.mp4"
+        prompt = "Add the hat from the reference image to the video."
+        pipeline_kwargs = dict(
+            prompts=[prompt],
+            negative_prompt=negative_prompt,
+            ref_images=ref_images_pil_list,
+            cond_video_path=cond_video_path,
+            height=480,
+            width=832,
+            num_frames=129,
+            num_inference_steps=30,
+            guidance_scale=7.0,
+            image_guidance_scale=2.0,
+            seed=42,
+            timestep_shift=7.0,
+            task="i+v2v_edit",
+        )
+        output_path = "demo/in_context_video_edit/id_addition/output.mp4"
+
 
     # free form v2v editing
-    elif args.task == "v2v_edit":
-        cond_video_path = "demo/v2v_edit/video.mp4"
+    elif args.demo_task == "video_edit":
+        cond_video_path = "demo/video_edit/video.mp4"
         prompt = "Change the man to look like he is sculpted from chocolate."
         pipeline_kwargs = dict(
             prompts=[prompt],
@@ -213,12 +294,32 @@ def main():
             image_guidance_scale=2.0,
             seed=42,
             timestep_shift=7.0,
-            task=args.task,
+            task="v2v_edit",
         )
-        output_path = "demo/v2v_edit/output.mp4"
+        output_path = "demo/video_edit/output.mp4"
+
+    # free form v2v stylization
+    elif args.demo_task == "stylization":
+        cond_video_path = "demo/video_edit/video.mp4"
+        prompt = "Change the style of the video to minecraft."
+        pipeline_kwargs = dict(
+            prompts=[prompt],
+            negative_prompt=negative_prompt,
+            cond_video_path=cond_video_path,
+            height=480,
+            width=832,
+            num_frames=77,
+            num_inference_steps=30,
+            guidance_scale=7.0,
+            image_guidance_scale=2.0,
+            seed=42,
+            timestep_shift=7.0,
+            task="v2v_edit",
+        )
+        output_path = "demo/video_edit/style/output.mp4"
 
     # i2v
-    elif args.task == "i2v":
+    elif args.demo_task == "i2v":
         cond_image_path = "demo/i2v/1.png"
         prompt = "The video shows a small capybara wearing round glasses, holding a book titled 'UniVideo' on its cover. The capybara keeps the book lifted in front of its face, gently turning pages as it reads, its head making small, focused nods that match the rhythm of careful study. Its posture remains steady as both paws grip the book, and its ears tilt slightly with each subtle movement. Soft, warm lighting and a simple blurred background stay secondary to the close-up focus on the capybara, its glasses, and the reading motion."
         pipeline_kwargs = dict(
@@ -233,12 +334,12 @@ def main():
             image_guidance_scale=1.0,
             seed=42,
             timestep_shift=7.0,
-            task=args.task,
+            task="i2v",
         )
         output_path = "demo/i2v/output.mp4"
 
     # t2v
-    elif args.task == "t2v":
+    elif args.demo_task == "t2v":
         prompt = "a stylish woman walks down a Tokyo street filled with warm glowing neon and animated city signage. She wears a black leather jacket, a long red dress, and black boots, and carries a black purse. She wears sunglasses and red lipstick. She walks confidently and casually. The street is damp and reflective, creating a mirror effect of the colorful lights. Many pedestrians walk about."
         pipeline_kwargs = dict(
             prompts=[prompt],
@@ -251,7 +352,7 @@ def main():
             image_guidance_scale=1.0,
             seed=42,
             timestep_shift=7.0,
-            task=args.task,
+            task="t2v",
         )
         output_path = "demo/t2v/output.mp4"
 

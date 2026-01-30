@@ -33,9 +33,28 @@
 </p>
 
 
+<p align="center"><img src="assets/teaser.jpg" width="55%"></p>
+
+## 🚀 Supported Tasks
+
+Univideo is flexible in its input and output configurations, supporting a wide range of multimodal tasks:
+
+| Task | Input Type | Output | Task ID | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| **Image/Video Understanding** | Image🖼️/Video🎬 + Text📝 | Text📝 | `understanding` | Multimodal analysis and captioning. |
+| **Text-to-Image** | Text📝 | Image🖼️ | `t2i` | Generating images from text prompts. |
+| **Text-to-Video** | Text📝 | Video🎬 | `t2v` | Generating videos from text prompts. |
+| **Image-to-Video** | Image🖼️ + Text📝 | Video🎬 | `i2v` | Animating a static image into a video. |
+| **Image Editing** | Image🖼️ + Text📝 | Image🖼️ | `i2i_edit` | Instruction-based image editing. |
+| **In-context Image Editing** | Image🖼️ + Image🖼️ + Text📝 | Image🖼️ | `i+i2i_edit` | Editing an image based on a reference image. |
+| **In-context Generation** | Image🖼️ $\times N$ + Text📝 | Image🖼️/Video🎬 | `multiid` | Multi-subject generation. |
+| **Video Editing** | Video🎬 + Text📝 | Video🎬 | `v2v_edit` | Instruction-based video manipulation and stylization |
+| **In-context Video Editing** | Image🖼️ + Video🎬 + Text📝 | Video🎬 | `i+v2v_edit` | Reference-based manipulation: addition, deletion, swapping, and stylization. |
+
+
 
 ## 🔔News
-
+- [2026-01-30]: UniVideo was accepted at ICLR 2026 🎉
 - [2026-01-07]: Released [Code](https://github.com/KlingTeam/UniVideo) and [Model](https://huggingface.co/KlingTeam/UniVideo).
 - [2025-10-09]: Released [Arxiv Preprint](https://arxiv.org/abs/2510.08377) and the [Project Page](https://congwei1230.github.io/UniVideo/)
 
@@ -74,34 +93,64 @@ We provide two UniVideo checkpoint variants as described in Arxiv Preprint Secti
 
 ### 3. Inference
 
-We provide inference scripts for running UniVideo on demo inputs for each task:
+We provide demo inference scripts to demonstrate how to load and run the UniVideo pipeline by setting up `pipeline_kwargs` on different inputs. Feel free to adapt these to your own inputs and setup.
 
-#### Univideo variant 1 
-```
-cd univideo
-python univideo_inference.py --task understanding --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task multiid       --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task t2v           --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task t2i           --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task i2i_edit      --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task i2v           --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task v2v_edit      --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-python univideo_inference.py --task i+v2v_edit    --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
-```
+#### 1. Basic Understanding & Generation
+```bash
+# Image/Video Captioning & Understanding
+python univideo_inference.py --demo_task understanding --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
 
-#### Univideo variant 2 
-```
-cd univideo
-python univideo_inference.py --task understanding --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task multiid       --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task t2v           --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task t2i           --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task i2i_edit      --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task i2v           --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task v2v_edit      --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
-python univideo_inference.py --task i+v2v_edit    --config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
+# Text-to-Video (T2V)
+python univideo_inference.py --demo_task t2v --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+
+# Text-to-Image (T2I)
+python univideo_inference.py --demo_task t2i --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+
+# Image-to-Video (I2V)
+python univideo_inference.py --demo_task i2v --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
 ```
 
+#### 2. Instruction-based Editing
+```bash
+# Image Editing 
+python univideo_inference.py --demo_task image_edit --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+
+# Video Editing
+python univideo_inference.py --demo_task video_edit --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+
+# Video Stylization
+python univideo_inference.py --demo_task stylization --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+```
+
+
+#### 3. In-Context Tasks
+
+```Bash
+# In context video generation
+python univideo_inference.py --demo_task in_context_video_gen --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+
+# In context image editing
+python univideo_inference.py --demo_task in_context_image_edit --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+
+# In context video editing
+## addition
+python univideo_inference.py --demo_task in_context_video_edit_addition --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+## swap
+python univideo_inference.py --demo_task in_context_video_edit_swap --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+## style
+python univideo_inference.py --demo_task in_context_video_edit_style --config configs/univideo_qwen2p5vl7b_hidden_hunyuanvideo.yaml
+```
+
+#### Univideo variant 2
+To use the **Queries-based** version of UniVideo, simply update the configuration flag.
+```
+--config configs/univideo_qwen2p5vl7b_queries_hunyuanvideo.yaml
+```
+
+
+### 4. Evaluation
+
+We provide the scripts for evaluating UniVideo on GenEval, ImgEdit, GEdit and Vbench benchmarks.  Check out [EVAL.md](EVAL.md)
 
 ## Acknowledgement
 
