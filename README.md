@@ -39,17 +39,165 @@
 
 Univideo is flexible in its input and output configurations, supporting a wide range of multimodal tasks:
 
-| Task | Input Type | Output | Task ID | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| **Image/Video Understanding** | Image🖼️/Video🎬 + Text📝 | Text📝 | `understanding` | Multimodal analysis and captioning. |
-| **Text-to-Image** | Text📝 | Image🖼️ | `t2i` | Generating images from text prompts. |
-| **Text-to-Video** | Text📝 | Video🎬 | `t2v` | Generating videos from text prompts. |
-| **Image-to-Video** | Image🖼️ + Text📝 | Video🎬 | `i2v` | Animating a static image into a video. |
-| **Image Editing** | Image🖼️ + Text📝 | Image🖼️ | `i2i_edit` | Instruction-based image editing. |
-| **In-context Image Editing** | Image🖼️ + Image🖼️ + Text📝 | Image🖼️ | `i+i2i_edit` | Editing an image based on a reference image. |
-| **In-context Generation** | Image🖼️ $\times N$ + Text📝 | Image🖼️/Video🎬 | `multiid` | Multi-subject generation. |
-| **Video Editing** | Video🎬 + Text📝 | Video🎬 | `v2v_edit` | Instruction-based video manipulation and stylization |
-| **In-context Video Editing** | Image🖼️ + Video🎬 + Text📝 | Video🎬 | `i+v2v_edit` | Reference-based manipulation: addition, deletion, swapping, and stylization. |
+<table>
+  <thead>
+    <tr>
+      <th>Task</th>
+      <th>Input Type</th>
+      <th>Output</th>
+      <th>Task ID</th>
+      <th>Description</th>
+      <th>Demo Input</th>
+      <th>Demo Output</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    <!-- Image / Video Understanding -->
+    <tr>
+      <td><b>Image/Video Understanding</b></td>
+      <td>Image🖼️ / Video🎬 + Text📝</td>
+      <td>Text📝</td>
+      <td><code>understanding</code></td>
+      <td>Multimodal analysis and captioning.</td>
+      <td align="center">
+        <img src="demo/understanding/input.jpg" width="50"/><br/>
+        <!-- <sub>Image / Video</sub> -->
+      </td>
+      <td align="center">
+        <!-- <img src="assets/teaser.png" width="140"/><br/> -->
+        <sub>Text</sub>
+      </td>
+    </tr>
+    <!-- Text-to-Image -->
+    <tr>
+      <td><b>Text-to-Image</b></td>
+      <td>Text📝</td>
+      <td>Image🖼️</td>
+      <td><code>t2i</code></td>
+      <td>Generating images from text prompts.</td>
+      <td align="center">
+        <!-- <img src="assets/teaser.png" width="140"/><br/> -->
+        <sub>Prompt</sub>
+      </td>
+      <td align="center">
+        <img src="demo/t2i/output.jpg" width="100"/><br/>
+      </td>
+    </tr>
+    <!-- Text-to-Video -->
+    <tr>
+      <td><b>Text-to-Video</b></td>
+      <td>Text📝</td>
+      <td>Video🎬</td>
+      <td><code>t2v</code></td>
+      <td>Generating videos from text prompts.</td>
+      <td align="center">
+        <!-- <img src="assets/teaser.png" width="140"/><br/> -->
+        <sub>Prompt</sub>
+      </td>
+      <td align="center">
+        <img src="demo/t2v/output.gif" width="140"/><br/>
+        <!-- <img src="assets/teaser.png" width="140"/> -->
+      </td>
+    </tr>
+    <!-- Image-to-Video -->
+    <tr>
+      <td><b>Image-to-Video</b></td>
+      <td>Image🖼️ + Text📝</td>
+      <td>Video🎬</td>
+      <td><code>i2v</code></td>
+      <td>Animating a static image into a video.</td>
+      <td align="center">
+        <img src="demo/i2v/1.png" width="140"/><br/>
+        <!-- <sub>Prompt</sub> -->
+      </td>
+      <td align="center">
+        <img src="demo/i2v/output.gif" width="140"/><br/>
+      </td>
+    </tr>
+    <!-- Image Editing -->
+    <tr>
+      <td><b>Image Editing</b></td>
+      <td>Image🖼️ + Text📝</td>
+      <td>Image🖼️</td>
+      <td><code>i2i_edit</code></td>
+      <td>Instruction-based image editing.</td>
+      <td align="center">
+        <img src="demo/image_edit/1.jpg" width="140"/><br/>
+        <!-- <sub>Instruction</sub> -->
+      </td>
+      <td align="center">
+        <img src="demo/image_edit/output.jpg" width="140"/><br/>
+        <!-- <sub>Edited Image</sub> -->
+      </td>
+    </tr>
+    <!-- In-context Image Editing -->
+    <tr>
+      <td><b>In-context Image Editing</b></td>
+      <td>Image🖼️ + Image🖼️ + Text📝</td>
+      <td>Image🖼️</td>
+      <td><code>i+i2i_edit</code></td>
+      <td>Editing an image based on a reference image.</td>
+      <td align="center">
+        <img src="demo/in_context_image_edit/id.jpeg" width="50"/>
+        <img src="demo/in_context_image_edit/input.jpg" width="50"/>
+        <!-- <sub>Source + Reference</sub> -->
+      </td>
+      <td align="center">
+        <img src="demo/in_context_image_edit/output.jpg" width="50"/><br/>
+        <!-- <sub>Edited Image</sub> -->
+      </td>
+    </tr>
+    <!-- In-context Generation -->
+    <tr>
+      <td><b>In-context Generation</b></td>
+      <td>Image🖼️ × N + Text📝</td>
+      <td>Image🖼️ / Video🎬</td>
+      <td><code>multiid</code></td>
+      <td>Multi-subject generation.</td>
+      <td align="center">
+        <img src="demo/in_context_video_gen/1.png" width="30"/>
+        <img src="demo/in_context_video_gen/2.png" width="30"/>
+        <img src="demo/in_context_video_gen/3.jpg" width="30"/>
+        <!-- <sub>Multiple References</sub> -->
+      </td>
+      <td align="center">
+        <img src="demo/in_context_video_gen/output.gif" width="140"/>
+      </td>
+    </tr>
+    <!-- Video Editing -->
+    <tr>
+      <td><b>Video Editing</b></td>
+      <td>Video🎬 + Text📝</td>
+      <td>Video🎬</td>
+      <td><code>v2v_edit</code></td>
+      <td>Instruction-based video manipulation and stylization.</td>
+      <td align="center">
+        <img src="demo/video_edit/video.gif" width="140"/><br/>
+        <!-- <sub>Original Video</sub> -->
+      </td>
+      <td align="center">
+        <img src="demo/video_edit/style/output.gif" width="140"/><br/>
+      </td>
+    </tr>
+    <!-- In-context Video Editing -->
+    <tr>
+      <td><b>In-context Video Editing</b></td>
+      <td>Image🖼️ + Video🎬 + Text📝</td>
+      <td>Video🎬</td>
+      <td><code>i+v2v_edit</code></td>
+      <td>Reference-based manipulation: addition, deletion, swapping, and stylization.</td>
+      <td align="center">
+        <img src="demo/in_context_video_edit/id_addition/images.jpeg" width="50"/><br/>
+        <img src="demo/in_context_video_edit/id_addition/reference.gif" width="140"/><br/>
+        <!-- <sub>Reference + Video</sub> -->
+      </td>
+      <td align="center">
+        <img src="demo/in_context_video_edit/id_addition/output.gif" width="140"/>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 
 
@@ -74,6 +222,15 @@ This environment is tested with:
 - PyTorch 2.4.1 + CUDA 12.1
 - diffusers 0.34.0
 - transformers 4.51.3
+
+
+Try this command if the conda create from yaml doesn't work 
+```
+conda create -n univideo python=3.11 -y
+conda activate univideo
+conda install pytorch==2.4.1 torchvision pytorch-cuda=12.1 -c pytorch -c nvidia -y
+pip install -r requirements.txt
+```
 
 ### 2. Download Checkpoint
 

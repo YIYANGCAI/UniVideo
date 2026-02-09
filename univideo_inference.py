@@ -138,6 +138,24 @@ def main():
             task="understanding",
         )
 
+    # image generation
+    elif args.demo_task == "t2i":
+        prompt = "A cute hamster lies leisurely on a lifebuoy, wearing fashionable sunglasses, and drifts with the gentle waves on the shimmering sea surface. The hamster reclines comfortably, enjoying a peaceful and pleasant time. Cartoon style, the camera follows the subject moving, with a heartwarming and high picture quality."
+        pipeline_kwargs = dict(
+            prompts=[prompt],
+            negative_prompt=negative_prompt,
+            height=1024,
+            width=1024,
+            num_frames=1,
+            num_inference_steps=50,
+            guidance_scale=7.0,
+            image_guidance_scale=1.0,
+            seed=42,
+            timestep_shift=7.0,
+            task="t2i",
+        )
+        output_path = "demo/t2i/output.jpg"
+
     # image editing
     elif args.demo_task == "image_edit":
         cond_image_path = "demo/image_edit/1.jpg"
@@ -267,7 +285,7 @@ def main():
             cond_video_path=cond_video_path,
             height=480,
             width=832,
-            num_frames=129,
+            num_frames=129, # decrease this to 61 if GPU oom
             num_inference_steps=30,
             guidance_scale=7.0,
             image_guidance_scale=2.0,
@@ -288,7 +306,7 @@ def main():
             cond_video_path=cond_video_path,
             height=480,
             width=854,
-            num_frames=129,
+            num_frames=129,  # decrease this to 61 if GPU oom
             num_inference_steps=50,
             guidance_scale=7.0,
             image_guidance_scale=2.0,
@@ -308,7 +326,7 @@ def main():
             cond_video_path=cond_video_path,
             height=480,
             width=832,
-            num_frames=77,
+            num_frames=77,  # decrease this to 61 if GPU oom
             num_inference_steps=30,
             guidance_scale=7.0,
             image_guidance_scale=2.0,
