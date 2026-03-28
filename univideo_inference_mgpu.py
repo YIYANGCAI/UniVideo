@@ -67,6 +67,7 @@ def main():
         mllm_encoder = load_model(mllm_encoder, mllm_encoder_ckpt_path)
     mllm_encoder.requires_grad_(False)
     mllm_encoder.eval()
+    mllm_encoder = mllm_encoder.to(torch.bfloat16)
     # Dispatch mllm_encoder layers across all available GPUs
     from accelerate import dispatch_model, infer_auto_device_map
     mllm_device_map = infer_auto_device_map(
@@ -115,6 +116,8 @@ def main():
     if isinstance(transformer_ckpt_path, str):
         print(f"[INIT] loading ckpt from {transformer_ckpt_path}")
         transformer = load_model(transformer, transformer_ckpt_path, rename_func=rename_func)
+
+    transformer = transformer.to(torch.bfloat16)
 
     # Dispatch transformer layers across all available GPUs
     transformer_device_map = infer_auto_device_map(
