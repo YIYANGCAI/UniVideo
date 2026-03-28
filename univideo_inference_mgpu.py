@@ -1,6 +1,5 @@
 import os
 import torch
-import torch.distributed as dist
 import numpy as np
 import yaml
 import argparse
@@ -45,19 +44,7 @@ def parse_args():
     return p.parse_args()
 
 
-def setup_distributed():
-    dist.init_process_group(backend="nccl")
-    local_rank = int(os.environ["LOCAL_RANK"])
-    torch.cuda.set_device(local_rank)
-    return local_rank
-
-
 def main():
-    local_rank = setup_distributed()
-    rank = dist.get_rank()
-    world_size = dist.get_world_size()
-    device = torch.device(f"cuda:{local_rank}")
-
     args = parse_args()
 
     with open(args.config, "r") as f:
@@ -73,30 +60,40 @@ def main():
     transformer_ckpt_path  = raw.get("transformer_ckpt_path")
     mllm_encoder_ckpt_path = raw.get("mllm_encoder_ckpt", None)
 
-    # Each rank loads its own copy; FSDP will shard across ranks
+    # MLLM encoder: split across GPUs via device_map="auto"
     mllm_encoder = MLLMInContext(mllm_config)
     if mllm_encoder_ckpt_path is not None:
-        if rank == 0:
-            print(f"[INIT] loading mllm_encoder ckpt from {mllm_encoder_ckpt_path}")
+        print(f"[INIT] loading mllm_encoder ckpt from {mllm_encoder_ckpt_path}")
         mllm_encoder = load_model(mllm_encoder, mllm_encoder_ckpt_path)
     mllm_encoder.requires_grad_(False)
     mllm_encoder.eval()
+    # Dispatch mllm_encoder layers across all available GPUs
+    from accelerate import dispatch_model, infer_auto_device_map
+    mllm_device_map = infer_auto_device_map(
+        mllm_encoder,
+        dtype=torch.bfloat16,
+        no_split_module_classes=getattr(mllm_encoder, "_no_split_modules", []),
+    )
+    mllm_encoder = dispatch_model(mllm_encoder, device_map=mllm_device_map)
 
+    # VAE: place on cuda:0 (relatively small)
     vae = AutoencoderKLHunyuanVideo.from_pretrained(
         pipe_cfg.hunyuan_model_id,
         subfolder="vae",
         low_cpu_mem_usage=False,
-        device_map=None
+        device_map=None,
     )
     vae.eval()
+    vae = vae.to(device="cuda:0", dtype=torch.bfloat16)
 
+    # Transformer: split across GPUs via device_map="auto"
     qwenvl_txt_dim = 3584
     transformer = HunyuanVideoTransformer3DModel.from_pretrained(
         pipe_cfg.hunyuan_model_id,
         subfolder="transformer",
         low_cpu_mem_usage=False,
         device_map=None,
-        text_embed_dim=qwenvl_txt_dim
+        text_embed_dim=qwenvl_txt_dim,
     )
     transformer.qwen_project_in = TwoLayerMLP(qwenvl_txt_dim, qwenvl_txt_dim * 4, 4096)
     with torch.no_grad():
@@ -106,8 +103,7 @@ def main():
                 torch.nn.init.xavier_uniform_(layer.weight, gain=1.0)
                 if layer.bias is not None:
                     torch.nn.init.zeros_(layer.bias)
-    if rank == 0:
-        print(f"[INIT] Reinitialized qwen_project_in ({qwenvl_txt_dim} -> {qwenvl_txt_dim * 4} -> 4096)")
+    print(f"[INIT] Reinitialized qwen_project_in ({qwenvl_txt_dim} -> {qwenvl_txt_dim * 4} -> 4096)")
 
     def rename_func(state_dict):
         new_state_dict = {}
@@ -117,44 +113,23 @@ def main():
         return new_state_dict
 
     if isinstance(transformer_ckpt_path, str):
-        if rank == 0:
-            print(f"[INIT] loading ckpt from {transformer_ckpt_path}")
+        print(f"[INIT] loading ckpt from {transformer_ckpt_path}")
         transformer = load_model(transformer, transformer_ckpt_path, rename_func=rename_func)
 
-    # Wrap large models with FSDP to shard parameters across GPUs
-    from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
-    from torch.distributed.fsdp import MixedPrecision
-    from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
-    import functools
-
-    bf16_policy = MixedPrecision(
-        param_dtype=torch.bfloat16,
-        reduce_dtype=torch.bfloat16,
-        buffer_dtype=torch.bfloat16,
+    # Dispatch transformer layers across all available GPUs
+    transformer_device_map = infer_auto_device_map(
+        transformer,
+        dtype=torch.bfloat16,
+        no_split_module_classes=transformer._no_split_modules,
     )
-
-    # Wrap transformer (largest model) with FSDP
-    transformer = FSDP(
-        transformer.to(device),
-        mixed_precision=bf16_policy,
-        device_id=device,
-    )
-
-    # Wrap mllm_encoder with FSDP
-    mllm_encoder = FSDP(
-        mllm_encoder.to(device),
-        mixed_precision=bf16_policy,
-        device_id=device,
-    )
-
-    # VAE is smaller; place on current device without FSDP
-    vae = vae.to(device=device, dtype=torch.bfloat16)
+    transformer = dispatch_model(transformer, device_map=transformer_device_map)
 
     scheduler = FlowMatchEulerDiscreteScheduler.from_pretrained(
         pipe_cfg.hunyuan_model_id,
-        subfolder="scheduler"
+        subfolder="scheduler",
     )
 
+    # Build pipeline without calling .to() — models are already dispatched
     pipeline = UniVideoPipeline(
         transformer=transformer,
         vae=vae,
@@ -162,8 +137,6 @@ def main():
         mllm_encoder=mllm_encoder,
         univideo_config=pipe_cfg,
     )
-    # Pipeline device/dtype already set via FSDP; set scheduler device
-    pipeline.scheduler = scheduler
 
     negative_prompt = "Bright tones, overexposed, oversharpening, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, walking backwards, computer-generated environment, weak dynamics, distorted and erratic motions, unstable framing and a disorganized composition."
 
@@ -401,32 +374,28 @@ def main():
 
     output = pipeline(**pipeline_kwargs)
 
-    # Only rank 0 saves output
-    if rank == 0:
-        if hasattr(output, "text") and output.text is not None:
-            for i, text in enumerate(output.text):
-                print(f"Output {i}:\n{repr(text)}")
-        elif hasattr(output, "frames"):
-            out = output.frames[0]
-            print(f"data.shape: {out.shape}, type: {type(out)}")
-            print(f"min: {out.min()}, max: {out.max()}, dtype: {out.dtype}")
+    if hasattr(output, "text") and output.text is not None:
+        for i, text in enumerate(output.text):
+            print(f"Output {i}:\n{repr(text)}")
+    elif hasattr(output, "frames"):
+        output = output.frames[0]
+        print(f"data.shape: {output.shape}, type: {type(output)}")
+        print(f"min: {output.min()}, max: {output.max()}, dtype: {output.dtype}")
 
-            if hasattr(out, "detach"):
-                out = out.detach().cpu().float().numpy()
-            F, H, W, C = out.shape
-            assert C == 3, f"Expected RGB, got C={C}"
-            if F == 1:
-                img = out[0]
-                if img.min() < 0:
-                    img = (img + 1.0) / 2.0
-                img = (img * 255).clip(0, 255).astype(np.uint8)
-                Image.fromarray(img).save(output_path)
-            else:
-                export_to_video(out, output_path, fps=24)
+        if hasattr(output, "detach"):
+            output = output.detach().cpu().float().numpy()
+        F, H, W, C = output.shape
+        assert C == 3, f"Expected RGB, got C={C}"
+        if F == 1:
+            img = output[0]
+            if img.min() < 0:
+                img = (img + 1.0) / 2.0
+            img = (img * 255).clip(0, 255).astype(np.uint8)
+            Image.fromarray(img).save(output_path)
         else:
-            raise ValueError(f"Unsupported pipeline output type: {type(output)}")
-
-    dist.destroy_process_group()
+            export_to_video(output, output_path, fps=24)
+    else:
+        raise ValueError(f"Unsupported pipeline output type: {type(output)}")
 
 
 if __name__ == "__main__":
